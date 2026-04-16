@@ -69,8 +69,8 @@ void user_button_init(void)
 
   	button_init(&button1, read_button_GPIO, button1_active , button1_id);       	// 初始化 初始化对象 回调函数 触发电平 按键ID
   	button_attach(&button1,BTN_SINGLE_CLICK,on_boot_single_click);            	    //单击事件             
-	button_attach(&button2,BTN_LONG_PRESS_START,on_boot_longpress_press);            	//长按事件
-	button_attach(&button2,BTN_PRESS_UP,on_boot_pressup_press);            	            //弹起事件
+	button_attach(&button1,BTN_LONG_PRESS_START,on_boot_longpress_press);            	//长按事件
+	button_attach(&button1,BTN_PRESS_UP,on_boot_pressup_press);            	            //弹起事件
 
   	button_init(&button2, read_button_GPIO, button2_active , button2_id);       	    // 初始化 初始化对象 回调函数 触发电平 按键ID
   	button_attach(&button2,BTN_SINGLE_CLICK,on_pwr_single_click);            		    //单击事件

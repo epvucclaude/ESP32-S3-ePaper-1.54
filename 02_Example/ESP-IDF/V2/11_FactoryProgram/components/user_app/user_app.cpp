@@ -27,13 +27,39 @@ i2c_equipment *rtc_dev = NULL;
 i2c_equipment_shtc3 *shtc3_dev = NULL;
 board_power_bsp_t board_div(EPD_PWR_PIN,Audio_PWR_PIN,VBAT_PWR_PIN);
 adc_bsp adc_dev;
-//touch_bsp *touch_dev = NULL;
+
+
+static bool is_rounder_event_cb_called = false;
+static QueueHandle_t gpio_evt_queue = NULL;
+
+
+touch_bsp *touch_dev = NULL;
 
 uint8_t power_flag = 0;
 uint8_t audio_flag = 0;
 
 lv_ui src_ui;
 
+static void IRAM_ATTR gpio_isr_handler(void* arg)
+{
+    uint32_t gpio_num = (uint32_t) arg;
+    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+}
+
+
+void user_gpio_touchinit() {
+    gpio_config_t io_conf = {};
+    io_conf.intr_type = GPIO_INTR_NEGEDGE;
+    io_conf.pin_bit_mask = (1ULL<<GPIO_NUM_21);
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&io_conf);
+    //install gpio isr service
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add(GPIO_NUM_21, gpio_isr_handler, (void*) GPIO_NUM_21);
+    gpio_evt_queue = xQueueCreate(3, sizeof(uint32_t));
+}
 
 void user_app_init(void)
 {
@@ -62,41 +88,61 @@ void user_app_init(void)
 
     shtc3_dev = new i2c_equipment_shtc3();
     
-    //touch_dev = new touch_bsp(ESP32_I2C_DEV_NUM,0x38,EPD_WIDTH,EPD_HEIGHT);
+    touch_dev = new touch_bsp(ESP32_I2C_DEV_NUM,0x38,EPD_WIDTH,EPD_HEIGHT);
 
     user_button_init();
     _sdcard_init();
     espwifi_init();
     audio_bsp_init();
+
+    user_gpio_touchinit();
 }
 
 void button_power_task(void *srg)
 {
     lv_ui *src = (lv_ui *)srg;
-    uint8_t flag = 1;
+    uint8_t flag = 0xff;
     for(;;)
     {
         EventBits_t even = xEventGroupWaitBits(pwr_groups,set_bit_all,pdTRUE,pdFALSE,pdMS_TO_TICKS(2 * 1000));
   	  	if(get_bit_button(even,0))         //单击
   	  	{
-            if(flag)
+            if(flag & 0x01)
             {
-                lv_obj_add_flag(src->screen_cont_1, LV_OBJ_FLAG_HIDDEN);
-                lv_obj_remove_flag(src->screen_cont_2,LV_OBJ_FLAG_HIDDEN);
-                flag = 0;
+                lv_obj_remove_flag(src_ui.screen_cont_2, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(src_ui.screen_cont_1, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(src_ui.screen_cont_4, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(src_ui.screen_cont_3, LV_OBJ_FLAG_HIDDEN);
+                flag &= 0xfe;
                 audio_flag = 1;
             }
             else
             {
-                lv_obj_add_flag(src->screen_cont_2, LV_OBJ_FLAG_HIDDEN);
-                lv_obj_remove_flag(src->screen_cont_1,LV_OBJ_FLAG_HIDDEN);
-                flag = 1;
+                lv_obj_remove_flag(src_ui.screen_cont_1, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(src_ui.screen_cont_2, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(src_ui.screen_cont_4, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(src_ui.screen_cont_3, LV_OBJ_FLAG_HIDDEN);
+                flag |= 0x01;
                 audio_flag = 0;
             }
         }
-        else if(get_bit_button(even,1))
+        else if(get_bit_button(even,1))  //双击
         {
-            
+            if(flag & 0x02) {
+                flag &= 0xfD;
+                lv_obj_remove_flag(src_ui.screen_cont_3, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(src_ui.screen_cont_1, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(src_ui.screen_cont_4, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(src_ui.screen_cont_2, LV_OBJ_FLAG_HIDDEN);
+                is_rounder_event_cb_called = 1;
+            } else {
+                flag |= 0x02;
+                lv_obj_remove_flag(src_ui.screen_cont_1, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(src_ui.screen_cont_2, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(src_ui.screen_cont_4, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(src_ui.screen_cont_3, LV_OBJ_FLAG_HIDDEN);
+                is_rounder_event_cb_called = 0;
+            }
         }
         else if(get_bit_button(even,2))
         {
@@ -184,7 +230,7 @@ void sdcard_lvgl_task(void *srg)
     char str_read[20] = {""};
     if(!sdcard_slot)
     {
-        lv_label_set_text(src->screen_label_5, "No sd card");
+        lv_label_set_text(src->screen_label_5, "No Card");
     }
     else
     {
@@ -248,7 +294,11 @@ void button_boot_task(void *arg)
         }
         else if(get_bit_button(even,1))
         {
-            
+            lv_obj_remove_flag(src_ui.screen_cont_4, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(src_ui.screen_cont_1, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(src_ui.screen_cont_2, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(src_ui.screen_cont_3, LV_OBJ_FLAG_HIDDEN);
+            ESP_LOGI("audio","play");
         }
         else if(get_bit_button(even,0))
         {
@@ -262,20 +312,33 @@ void button_boot_task(void *arg)
     }
 }
 
-//void touch_test_task(void *pvParameters)
-//{
-//    for(;;)
-//    {
-//        uint16_t _x = 0,_y = 0;
-//        uint8_t win = 0;
-//        win = touch_dev->getTouch(&_x,&_y);
-//        if(win)
-//        {
-//            ESP_LOGI("touch","(%d,%d)",_x,_y);
-//        }
-//        vTaskDelay(pdMS_TO_TICKS(100));
-//    }
-//}
+void touch_test_task(void *pvParameters)
+{
+    uint32_t io_num;
+    for(;;)
+    {
+        if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
+            if(is_rounder_event_cb_called) {
+                uint16_t _x = 0,_y = 0;
+                uint8_t win = 0;
+                win = touch_dev->getTouch(&_x,&_y);
+                if(win) {
+                    if(_x < 80 && _y < 80) {
+                        lv_label_set_text(src_ui.screen_label_23, "Button 1 was clicked");
+                    } else if(_x < 80 && _y < 198 && _y >= 118) {
+                        lv_label_set_text(src_ui.screen_label_23, "Button 3 was clicked");
+                    } else if(_x >= 119 && _x < 199 && _y < 80) {
+                        lv_label_set_text(src_ui.screen_label_23, "Button 2 was clicked");
+                    }
+                    else if(_x >= 119 && _x < 199 && _y >= 118 && _y < 198) {
+                        lv_label_set_text(src_ui.screen_label_23, "Button 4 was clicked");
+                    }
+                    ESP_LOGW("touch","(%d,%d)",_x,_y);
+                }
+            }
+        }
+    }
+}
 
 void led_test_task(void *arg)
 {
@@ -306,5 +369,5 @@ void user_ui_init(void)
     xTaskCreatePinnedToCore(example_scan_wifi_ble_task, "example_scan_wifi_ble_task", 4 * 1024, (void *)&src_ui, 2, NULL,1);
     xTaskCreatePinnedToCore(button_boot_task, "button_boot_task", 4 * 1024, NULL, 4, NULL,1);
     xTaskCreatePinnedToCore(led_test_task, "led_test_task", 4 * 1024, NULL, 4, NULL,1);
-    //xTaskCreate(touch_test_task, "touch_test_task", 3 * 1024,NULL, 5, NULL);
+    xTaskCreatePinnedToCore(touch_test_task, "touch_test_task", 3 * 1024,NULL, 2, NULL,1);
 }
