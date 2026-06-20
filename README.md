@@ -1,3 +1,5 @@
+NOTE: all i did was fork this repo and have claude fix all the idf v6 breaking changes so it builds, and only in the 02_Example/ESP-IDF/V2 directory.  All 13 of the examples there build and seem to work with esp-idf v6.0.1 and my ESP32-S3-ePaper-1.54 v2 board now. 
+
 # ESP32-S3-ePaper-1.54
 
 中文wiki链接: https://www.waveshare.net/wiki/ESP32-S3-ePaper-1.54<br>
