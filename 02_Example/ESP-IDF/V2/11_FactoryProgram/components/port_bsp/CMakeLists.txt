@@ -10,7 +10,6 @@ idf_component_register(
     "port_shtc3.cpp"
     "port_codec.cpp"
     PRIV_REQUIRES
-    driver
     esp_adc
     lvgl
     fatfs 
@@ -19,7 +18,10 @@ idf_component_register(
     codec_board
     espressif__esp_codec_dev
     REQUIRES
-    driver        
+    esp_driver_gpio
+    esp_driver_spi
+    esp_driver_i2c
+    esp_driver_sdmmc
     INCLUDE_DIRS
     "./"
     EMBED_FILES "canon.pcm"

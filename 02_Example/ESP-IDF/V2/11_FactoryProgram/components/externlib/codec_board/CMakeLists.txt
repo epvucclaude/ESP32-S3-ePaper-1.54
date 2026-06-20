@@ -1,5 +1,5 @@
 
-set(COMPONENT_PRIV_REQUIRE driver esp_codec_dev fatfs esp_lcd)
+set(COMPONENT_PRIV_REQUIRE driver esp_codec_dev fatfs esp_lcd esp_driver_i2c esp_driver_i2s esp_driver_sdmmc esp_driver_gpio esp_driver_spi)
 
 if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.3")
 list(APPEND COMPONENT_PRIV_REQUIRE esp_driver_i2c)

@@ -3,7 +3,7 @@ idf_component_register(
   PRIV_REQUIRES
   port_bsp
   ui
-  driver
+  esp_driver_gpio
   my_button
   codec_board
   waveshare__pcf85063a
