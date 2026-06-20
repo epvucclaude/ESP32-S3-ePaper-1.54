@@ -3,7 +3,7 @@ dependencies:
     rules:
     - if: target in [esp32p4]
     version: ~1.0.2
-  espressif/esp_codec_dev: ~1.3.4
+  espressif/esp_codec_dev: ~1.5.0
   espressif/esp_lcd_ili9881c:
     rules:
     - if: target in [esp32p4]

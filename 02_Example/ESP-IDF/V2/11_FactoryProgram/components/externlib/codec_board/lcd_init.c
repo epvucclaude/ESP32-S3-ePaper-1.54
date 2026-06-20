@@ -201,7 +201,7 @@ static int _init_spi_lcd(lcd_cfg_t *cfg)
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
 #elif ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
-        .rgb_ele_order = ESP_LCD_COLOR_SPACE_BGR,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
 #else
         .rgb_endian = LCD_RGB_ENDIAN_BGR,
 #endif

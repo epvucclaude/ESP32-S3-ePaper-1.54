@@ -493,10 +493,10 @@ int init_codec(codec_init_cfg_t *cfg)
                 codec_res.in_ctrl_if = audio_codec_new_i2c_ctrl(&i2c_cfg);
                 es7210_codec_cfg_t es7210_cfg = {
                     .ctrl_if = codec_res.in_ctrl_if,
-                    .mic_selected = ES7120_SEL_MIC1 | ES7120_SEL_MIC3,
+                    .mic_selected = ES7210_SEL_MIC1 | ES7210_SEL_MIC3,
                 };
                 if (cfg->in_use_tdm || (cfg->in_mode == CODEC_I2S_MODE_TDM)) {
-                    es7210_cfg.mic_selected |= ES7120_SEL_MIC2 | ES7120_SEL_MIC4;
+                    es7210_cfg.mic_selected |= ES7210_SEL_MIC2 | ES7210_SEL_MIC4;
                 }
                 codec_res.in_codec_if = es7210_codec_new(&es7210_cfg);
             } break;
